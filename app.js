@@ -8,7 +8,7 @@ const appState = {
 };
 
 // 2. Define the Factory Function for New Elements
- 
+
 function createNewElement(type) {
     return {
         id: Date.now().toString(),        // Unique ID based on current timestamp
@@ -22,7 +22,7 @@ function createNewElement(type) {
     };
 }
 
-   // Phase 2: The Rendering Engine
+// Phase 2: The Rendering Engine
 
 /*
   Renders the canvas based on the current appState.
@@ -88,6 +88,65 @@ function renderCanvas() {
 function renderPropertiesPanel() {
     console.log("Properties Panel Updated (Phase 5 Feature)");
 }
+
+// Phase 3: Dragging Logic
+
+let isDragging = false;
+let startX, startY;
+let initialElementX, initialElementY;
+
+// 1. Start Dragging
+document.getElementById('canvas-container').addEventListener('mousedown', (e) => {
+    // Only drag if we clicked a valid element
+    if (!appState.selectedElementId) return;
+
+    const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
+    if (!selectedEl) return;
+
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    initialElementX = selectedEl.x;
+    initialElementY = selectedEl.y;
+});
+
+// 2. Move (The Physics)
+window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+
+    // Calculate movement delta
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+
+    // Update the data
+    const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
+    if (!selectedEl) return; // Safety check
+
+    // Apply new position (initial position + delta)
+    let newX = initialElementX + deltaX;
+    let newY = initialElementY + deltaY;
+
+    // Boundary Checks (Keep within positive coordinates)
+    if (newX < 0) newX = 0;
+    if (newY < 0) newY = 0;
+
+    selectedEl.x = newX;
+    selectedEl.y = newY;
+
+    renderCanvas(); // Instantly update the screen
+});
+
+// 3. Stop Dragging
+window.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        console.log("Drag Ended. New Position Saved.");
+        // TODO: Save state to localStorage here
+    }
+});
 
 // Initialization
 // Add some dummy data to verify Phase 2 immediately
