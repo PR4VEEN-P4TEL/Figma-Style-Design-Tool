@@ -68,7 +68,26 @@ function renderCanvas() {
         if (appState.selectedElementId === elementData.id && elementData.type !== 'text') {
             elNode.style.boxShadow = "0 0 10px #00f0ff"; // Neon glow for selection
             elNode.style.border = "2px solid #fff";
-            // TODO: Append resize handles here (Phase 4)
+
+            // Phase 4: Resize Handle
+            const handle = document.createElement('div');
+            handle.className = 'resize-handle';
+
+            // Prevent dragging when clicking handle
+            handle.addEventListener('mousedown', (e) => {
+                e.stopPropagation(); // Don't trigger drag
+                e.preventDefault(); // Prevent text selection
+
+                isResizing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = elementData.width;
+                startHeight = elementData.height;
+
+                console.log("Resize Started");
+            });
+
+            elNode.appendChild(handle);
         }
 
         // D. Attach event listeners (for selection)
@@ -92,11 +111,16 @@ function renderPropertiesPanel() {
 // Phase 3: Dragging Logic
 
 let isDragging = false;
+let isResizing = false; // Phase 4
 let startX, startY;
 let initialElementX, initialElementY;
+let startWidth, startHeight; // Phase 4
 
 // 1. Start Dragging
 document.getElementById('canvas-container').addEventListener('mousedown', (e) => {
+    // Phase 4: If clicking the resize handle, do NOT start dragging
+    if (e.target.classList.contains('resize-handle')) return;
+
     // Only drag if we clicked a valid element
     if (!appState.selectedElementId) return;
 
@@ -112,38 +136,65 @@ document.getElementById('canvas-container').addEventListener('mousedown', (e) =>
 
 // 2. Move (The Physics)
 window.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
+    // A. Resizing Logic (Phase 4)
+    if (isResizing) {
+        const currentX = e.clientX;
+        const currentY = e.clientY;
 
-    const currentX = e.clientX;
-    const currentY = e.clientY;
+        const deltaX = currentX - startX;
+        const deltaY = currentY - startY;
 
-    // Calculate movement delta
-    const deltaX = currentX - startX;
-    const deltaY = currentY - startY;
+        const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
+        if (!selectedEl) return;
 
-    // Update the data
-    const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
-    if (!selectedEl) return; // Safety check
+        let newWidth = startWidth + deltaX;
+        let newHeight = startHeight + deltaY;
 
-    // Apply new position (initial position + delta)
-    let newX = initialElementX + deltaX;
-    let newY = initialElementY + deltaY;
+        // Constraint: Minimum 10px
+        if (newWidth < 10) newWidth = 10;
+        if (newHeight < 10) newHeight = 10;
 
-    // Boundary Checks (Keep within positive coordinates)
-    if (newX < 0) newX = 0;
-    if (newY < 0) newY = 0;
+        selectedEl.width = newWidth;
+        selectedEl.height = newHeight;
 
-    selectedEl.x = newX;
-    selectedEl.y = newY;
+        renderCanvas();
+        return; // Don't drag if resizing
+    }
 
-    renderCanvas(); // Instantly update the screen
+    // B. Dragging Logic
+    if (isDragging) {
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+
+        // Calculate movement delta
+        const deltaX = currentX - startX;
+        const deltaY = currentY - startY;
+
+        // Update the data
+        const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
+        if (!selectedEl) return; // Safety check
+
+        // Apply new position (initial position + delta)
+        let newX = initialElementX + deltaX;
+        let newY = initialElementY + deltaY;
+
+        // Boundary Checks (Keep within positive coordinates)
+        if (newX < 0) newX = 0;
+        if (newY < 0) newY = 0;
+
+        selectedEl.x = newX;
+        selectedEl.y = newY;
+
+        renderCanvas(); // Instantly update the screen
+    }
 });
 
-// 3. Stop Dragging
+// 3. Stop Dragging / Resizing
 window.addEventListener('mouseup', () => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
         isDragging = false;
-        console.log("Drag Ended. New Position Saved.");
+        isResizing = false;
+        console.log("Action Ended. State Saved.");
         // TODO: Save state to localStorage here
     }
 });

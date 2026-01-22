@@ -1,4 +1,4 @@
-/* 1. CSS Variables & Reset */
+/* 1. CSS Variables & Reset  */
 :root {
     /* Colors - Dark Premium Theme */
     --bg-dark: #1e1e1e;
@@ -33,7 +33,8 @@ body {
     overflow: hidden;
 }
 
-/* 2. Layout & Structure */
+/* 2. Layout Structure */
+
 #app {
     display: flex;
     flex-direction: column;
@@ -71,7 +72,22 @@ body {
     width: 100%;
     height: 100%;
     position: relative;
-     /* Dot grid pattern for professional look  */
+    /* Dot grid pattern for professional look */
     background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
     background-size: 20px 20px;
+}
+
+/* 3. Resize Handles (Phase 4) */
+.resize-handle {
+    width: 10px;
+    height: 10px;
+    background-color: white;
+    border: 1px solid var(--accent-primary);
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    cursor: nwse-resize;
+    z-index: 100;
+    /* Ensure it helps appearing above other things */
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
