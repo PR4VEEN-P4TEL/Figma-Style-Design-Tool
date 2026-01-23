@@ -20,11 +20,46 @@
             <div class="logo">Design Tool</div>
         </header>
 
-        <main class="canvas-container">
-            <div id="canvas-container" class="canvas">
-                <!-- Design elements will be rendered here -->
-            </div>
-        </main>
+        <div class="workspace">
+            <!-- Left Sidebar: Layers -->
+            <aside class="panel layers-panel">
+                <div class="panel-header">Layers</div>
+                <ul id="layers-list" class="layers-list">
+                    <!-- Layer items injected by JS -->
+                </ul>
+            </aside>
+
+            <!-- Center: Canvas -->
+            <main class="canvas-container">
+                <div id="canvas-container" class="canvas">
+                    <!-- Design elements will be rendered here -->
+                </div>
+            </main>
+
+            <!-- Right Sidebar: Properties -->
+            <aside class="panel properties-panel">
+                <div class="panel-header">Properties</div>
+                <div id="properties-content" class="properties-content">
+                    <div class="prop-group">
+                        <label>X</label> <input type="number" id="prop-x">
+                        <label>Y</label> <input type="number" id="prop-y">
+                    </div>
+                    <div class="prop-group">
+                        <label>W</label> <input type="number" id="prop-width">
+                        <label>H</label> <input type="number" id="prop-height">
+                    </div>
+                    <div class="prop-group full-width">
+                        <label>Color</label> <input type="color" id="prop-color">
+                    </div>
+                    <div class="prop-group full-width">
+                        <label>Rotation</label> <input type="number" id="prop-rotation">
+                    </div>
+                    <div class="prop-group full-width" id="text-prop-group" style="display:none;">
+                        <label>Text</label> <input type="text" id="prop-text">
+                    </div>
+                </div>
+            </aside>
+        </div>
     </div>
 
     <script src="app.js"></script>

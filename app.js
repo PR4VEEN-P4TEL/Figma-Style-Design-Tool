@@ -95,17 +95,137 @@ function renderCanvas() {
             e.stopPropagation(); // Prevent background canvas selection
             appState.selectedElementId = elementData.id;
             renderCanvas(); // Re-render to reflect selection visually
-            renderPropertiesPanel(); // Refresh sidebar (Phase 5)
         });
 
         // E. Add to DOM
         canvas.appendChild(elNode);
     });
+
+    // Phase 5: Update Panels
+    renderPropertiesPanel();
+    renderLayersPanel();
 }
 
-// Stub for Phase 5 to prevent errors
+
+//   Update Properties Panel
+//   Syncs input values with selected element data.
+
 function renderPropertiesPanel() {
-    console.log("Properties Panel Updated (Phase 5 Feature)");
+    const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
+
+    // Get Inputs
+    const inputs = {
+        x: document.getElementById('prop-x'),
+        y: document.getElementById('prop-y'),
+        width: document.getElementById('prop-width'),
+        height: document.getElementById('prop-height'),
+        color: document.getElementById('prop-color'),
+        rotation: document.getElementById('prop-rotation'),
+        text: document.getElementById('prop-text'),
+        textGroup: document.getElementById('text-prop-group')
+    };
+
+    if (selectedEl) {
+        // 1. Sync input values with data
+        inputs.x.value = Math.round(selectedEl.x);
+        inputs.y.value = Math.round(selectedEl.y);
+        inputs.width.value = Math.round(selectedEl.width);
+        inputs.height.value = Math.round(selectedEl.height);
+        inputs.color.value = selectedEl.backgroundColor;
+        inputs.rotation.value = selectedEl.rotation;
+
+        // Show/Hide Text input
+        if (selectedEl.type === 'text') {
+            inputs.textGroup.style.display = 'flex';
+            inputs.text.value = selectedEl.text;
+        } else {
+            inputs.textGroup.style.display = 'none';
+        }
+
+        // 2. Enable inputs
+        Object.values(inputs).forEach(inp => {
+            if (inp && inp !== inputs.textGroup) inp.disabled = false;
+        });
+
+        // 3. Bind Events (Use helper to avoid closure loops or redefining weirdly)
+        // Note: In a real app, we'd remove old listeners. Here we just overwrite 'oninput' property.
+
+        inputs.x.oninput = (e) => updateProperty('x', parseInt(e.target.value));
+        inputs.y.oninput = (e) => updateProperty('y', parseInt(e.target.value));
+        inputs.width.oninput = (e) => updateProperty('width', parseInt(e.target.value));
+        inputs.height.oninput = (e) => updateProperty('height', parseInt(e.target.value));
+        inputs.rotation.oninput = (e) => updateProperty('rotation', parseInt(e.target.value));
+        inputs.color.oninput = (e) => updateProperty('backgroundColor', e.target.value);
+        inputs.text.oninput = (e) => updateProperty('text', e.target.value);
+
+    } else {
+        // Disable inputs if nothing is selected
+        Object.values(inputs).forEach(inp => {
+            if (inp && inp !== inputs.textGroup) {
+                inp.value = '';
+                inp.disabled = true;
+            }
+        });
+        inputs.textGroup.style.display = 'none';
+    }
+}
+
+function updateProperty(key, value) {
+    const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
+    if (selectedEl) {
+        selectedEl[key] = value;
+        renderCanvas();
+    }
+}
+
+// Update Layers Panel
+
+function renderLayersPanel() {
+    const list = document.getElementById('layers-list');
+    list.innerHTML = '';
+
+    // Loop REVERSED so top elements appear at top of list
+    // Copy array to not mutate original during reverse
+    [...appState.elements].reverse().forEach((el, index) => {
+        // Real index in the original array (since we reversed loop)
+        const realIndex = appState.elements.length - 1 - index;
+
+        const li = document.createElement('li');
+        li.className = 'layer-item';
+        if (appState.selectedElementId === el.id) li.classList.add('active');
+
+        const label = document.createElement('span');
+        label.innerText = `${el.type} ${realIndex}`;
+
+        const btn = document.createElement('button');
+        btn.className = 'layer-btn';
+        btn.innerText = '▲';
+        btn.title = 'Move Up';
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            moveLayerUp(realIndex);
+        };
+
+        li.onclick = () => {
+            appState.selectedElementId = el.id;
+            renderCanvas();
+        };
+
+        li.appendChild(label);
+        li.appendChild(btn);
+        list.appendChild(li);
+    });
+}
+
+function moveLayerUp(index) {
+    if (index >= appState.elements.length - 1) return; // Already at top
+
+    // Swap with next element
+    const temp = appState.elements[index];
+    appState.elements[index] = appState.elements[index + 1];
+    appState.elements[index + 1] = temp;
+
+    renderCanvas();
 }
 
 // Phase 3: Dragging Logic
