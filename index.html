@@ -18,11 +18,24 @@
         <!-- Toolbar/UI placeholders for future phases -->
         <header class="top-bar">
             <div class="logo">Design Tool</div>
+            <!-- Spacer -->
+            <div style="flex: 1;"></div>
+            <button id="btn-delete"
+                style="margin-right: 10px; padding: 4px 8px; cursor: pointer; color: #ff4d4d; border-color: #ff4d4d;">Delete</button>
+            <button id="btn-export" style="margin-right: 10px; padding: 4px 8px; cursor: pointer;">Export JSON</button>
+            <button id="btn-clear" style="padding: 4px 8px; cursor: pointer;">Clear Canvas</button>
         </header>
 
         <div class="workspace">
-            <!-- Left Sidebar: Layers -->
+            <!-- Left Sidebar: Layers & Toolbox -->
             <aside class="panel layers-panel">
+                <div class="panel-header">Toolbox</div>
+                <div class="toolbox">
+                    <button id="btn-add-rect" class="tool-btn">Rectangle</button>
+                    <button id="btn-add-circle" class="tool-btn">Circle</button>
+                    <button id="btn-add-text" class="tool-btn">Text</button>
+                </div>
+
                 <div class="panel-header">Layers</div>
                 <ul id="layers-list" class="layers-list">
                     <!-- Layer items injected by JS -->

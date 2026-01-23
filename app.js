@@ -53,6 +53,11 @@ function renderCanvas() {
         elNode.style.justifyContent = 'center';
         elNode.style.userSelect = 'none'; // Prevent text selection while dragging
 
+        // Render styles based on type
+        if (elementData.type === 'circle') {
+            elNode.style.borderRadius = '50%';
+        }
+
         // Render text content if it exists
         if (elementData.type === 'text') {
             elNode.innerText = elementData.text;
@@ -174,6 +179,7 @@ function updateProperty(key, value) {
     const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
     if (selectedEl) {
         selectedEl[key] = value;
+        saveState(); // Persist changes
         renderCanvas();
     }
 }
@@ -228,13 +234,37 @@ function moveLayerUp(index) {
     renderCanvas();
 }
 
-// Phase 3: Dragging Logic
+// Phase 3: Dragging Logic & Feature: Keyboard/Boundaries
 
 let isDragging = false;
 let isResizing = false; // Phase 4
 let startX, startY;
 let initialElementX, initialElementY;
 let startWidth, startHeight; // Phase 4
+
+// Boundary Helper
+function getConstrainedPosition(x, y, width, height) {
+    const canvas = document.getElementById('canvas-container');
+    if (!canvas) return { x, y };
+    const maxX = canvas.clientWidth - width;
+    const maxY = canvas.clientHeight - height;
+    return {
+        x: Math.max(0, Math.min(x, maxX < 0 ? 0 : maxX)),
+        y: Math.max(0, Math.min(y, maxY < 0 ? 0 : maxY))
+    };
+}
+
+// Boundary Helper
+function getConstrainedPosition(x, y, width, height) {
+    const canvas = document.getElementById('canvas-container');
+    if (!canvas) return { x, y };
+    const maxX = canvas.clientWidth - width;
+    const maxY = canvas.clientHeight - height;
+    return {
+        x: Math.max(0, Math.min(x, maxX < 0 ? 0 : maxX)),
+        y: Math.max(0, Math.min(y, maxY < 0 ? 0 : maxY))
+    };
+}
 
 // 1. Start Dragging
 document.getElementById('canvas-container').addEventListener('mousedown', (e) => {
@@ -298,31 +328,151 @@ window.addEventListener('mousemove', (e) => {
         let newX = initialElementX + deltaX;
         let newY = initialElementY + deltaY;
 
-        // Boundary Checks (Keep within positive coordinates)
-        if (newX < 0) newX = 0;
-        if (newY < 0) newY = 0;
-
-        selectedEl.x = newX;
-        selectedEl.y = newY;
+        // Feature: Boundary Checks (Strict)
+        const constrained = getConstrainedPosition(newX, newY, selectedEl.width, selectedEl.height);
+        selectedEl.x = constrained.x;
+        selectedEl.y = constrained.y;
 
         renderCanvas(); // Instantly update the screen
+    }
+});
+
+// Feature: Keyboard Interaction
+window.addEventListener('keydown', (e) => {
+    // Only if an element is selected
+    if (!appState.selectedElementId) return;
+
+    // Ignore if user is typing in an input field (e.g. Properties panel)
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const selectedEl = appState.elements.find(el => el.id === appState.selectedElementId);
+    if (!selectedEl) return;
+
+    let newX = selectedEl.x;
+    let newY = selectedEl.y;
+    let changed = false;
+
+    if (e.key === "ArrowRight") { newX += 5; changed = true; }
+    if (e.key === "ArrowLeft") { newX -= 5; changed = true; }
+    if (e.key === "ArrowUp") { newY -= 5; changed = true; }
+    if (e.key === "ArrowDown") { newY += 5; changed = true; }
+
+    if (changed) {
+        e.preventDefault(); // Prevent scrolling
+
+        // Apply Boundaries
+        const constrained = getConstrainedPosition(newX, newY, selectedEl.width, selectedEl.height);
+        selectedEl.x = constrained.x;
+        selectedEl.y = constrained.y;
+
+        renderCanvas();
+        saveState(); // Persist changes from keyboard
+    }
+
+    // Deletion Interactions
+    if (e.key === "Delete" || e.key === "Backspace") {
+        deleteSelectedElement();
     }
 });
 
 // 3. Stop Dragging / Resizing
 window.addEventListener('mouseup', () => {
     if (isDragging || isResizing) {
+        if (isDragging || isResizing) {
+            // Only save if we actually did something
+            saveState();
+        }
         isDragging = false;
         isResizing = false;
         console.log("Action Ended. State Saved.");
-        // TODO: Save state to localStorage here
     }
 });
 
-// Initialization
-// Add some dummy data to verify Phase 2 immediately
-const initElement = createNewElement('rectangle');
-appState.elements.push(initElement);
 
-// Render initial state
-renderCanvas();
+// Initialization & Persistence
+
+function saveState() {
+    const jsonString = JSON.stringify(appState.elements);
+    localStorage.setItem('canvasDesign', jsonString);
+    console.log("State Saved to LocalStorage");
+}
+
+function loadState() {
+    const savedData = localStorage.getItem('canvasDesign');
+    if (savedData) {
+        try {
+            appState.elements = JSON.parse(savedData);
+            console.log("State Loaded from LocalStorage");
+        } catch (e) {
+            console.error("Failed to load state", e);
+        }
+    } else {
+        // Default init if empty
+        const initElement = createNewElement('rectangle');
+        appState.elements.push(initElement);
+    }
+    renderCanvas();
+}
+
+function exportState() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState.elements, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "design.json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function clearCanvas() {
+    if (confirm("Are you sure you want to clear the canvas?")) {
+        appState.elements = [];
+        appState.selectedElementId = null;
+        saveState();
+        renderCanvas();
+        renderPropertiesPanel();
+    }
+}
+
+function deleteSelectedElement() {
+    if (!appState.selectedElementId) return;
+
+    appState.elements = appState.elements.filter(el => el.id !== appState.selectedElementId);
+    appState.selectedElementId = null;
+
+    saveState();
+    renderCanvas();
+    renderPropertiesPanel();
+    renderLayersPanel();
+}
+
+
+// Hook up Buttons
+document.getElementById('btn-export')?.addEventListener('click', exportState);
+document.getElementById('btn-clear')?.addEventListener('click', clearCanvas);
+document.getElementById('btn-delete')?.addEventListener('click', deleteSelectedElement);
+
+// Initial Load
+loadState();
+
+// Phase 6: Toolbox Logic
+function addElement(type) {
+    const newEl = createNewElement(type);
+
+    // Optional: Offset slightly so they don't stack perfectly
+    const offset = appState.elements.length * 10;
+    newEl.x += offset % 100;
+    newEl.y += offset % 100;
+
+    appState.elements.push(newEl);
+    appState.selectedElementId = newEl.id; // Auto-select
+
+    renderCanvas();
+    renderPropertiesPanel(); // Show properties for new item
+    renderLayersPanel();     // Update list
+    saveState();             // Persist immediately
+}
+
+document.getElementById('btn-add-rect')?.addEventListener('click', () => addElement('rectangle'));
+document.getElementById('btn-add-circle')?.addEventListener('click', () => addElement('circle'));
+document.getElementById('btn-add-text')?.addEventListener('click', () => addElement('text'));
