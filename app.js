@@ -203,13 +203,23 @@ function renderLayersPanel() {
         const label = document.createElement('span');
         label.innerText = `${el.type} ${realIndex}`;
 
-        const btn = document.createElement('button');
-        btn.className = 'layer-btn';
-        btn.innerText = '▲';
-        btn.title = 'Move Up';
-        btn.onclick = (e) => {
+        const btnMoveUp = document.createElement('button');
+        btnMoveUp.className = 'layer-btn';
+        btnMoveUp.innerText = '▲';
+        btnMoveUp.title = 'Move Up';
+        btnMoveUp.onclick = (e) => {
             e.stopPropagation();
             moveLayerUp(realIndex);
+        };
+
+        const btnDelete = document.createElement('button');
+        btnDelete.className = 'layer-btn delete-btn';
+        btnDelete.innerText = '🗑️';
+        btnDelete.title = 'Delete';
+        btnDelete.style.marginLeft = '4px';
+        btnDelete.onclick = (e) => {
+            e.stopPropagation();
+            deleteElement(el.id);
         };
 
         li.onclick = () => {
@@ -218,7 +228,8 @@ function renderLayersPanel() {
         };
 
         li.appendChild(label);
-        li.appendChild(btn);
+        li.appendChild(btnMoveUp);
+        li.appendChild(btnDelete);
         list.appendChild(li);
     });
 }
@@ -370,8 +381,8 @@ window.addEventListener('keydown', (e) => {
     }
 
     // Deletion Interactions
-    if (e.key === "Delete" || e.key === "Backspace") {
-        deleteSelectedElement();
+    if ((e.key === "Delete" || e.key === "Backspace") && appState.selectedElementId) {
+        deleteElement(appState.selectedElementId);
     }
 });
 
@@ -434,23 +445,111 @@ function clearCanvas() {
     }
 }
 
-function deleteSelectedElement() {
-    if (!appState.selectedElementId) return;
+function deleteElement(id) {
+    if (!id) return;
 
-    appState.elements = appState.elements.filter(el => el.id !== appState.selectedElementId);
-    appState.selectedElementId = null;
+    // 1. Remove the element by filtering the array
+    appState.elements = appState.elements.filter(el => el.id !== id);
 
+    // 2. If the deleted element was selected, clear the selection
+    if (appState.selectedElementId === id) {
+        appState.selectedElementId = null;
+    }
+
+    // 3. Update UI and save
     saveState();
     renderCanvas();
-    renderPropertiesPanel();
-    renderLayersPanel();
+    // renderCanvas calls properties/layers panels updates automatically
 }
 
 
+function exportToHTML() {
+    // 1. Map elements to HTML string
+    const elementsHTML = appState.elements.map(el => {
+        const isCircle = el.type === 'circle';
+        const isText = el.type === 'text';
+
+        let style = `
+            position: absolute;
+            left: ${el.x}px;
+            top: ${el.y}px;
+            width: ${el.width}px;
+            height: ${el.height}px;
+            background-color: ${el.backgroundColor};
+            transform: rotate(${el.rotation}deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff; 
+            user-select: none;
+        `;
+
+        if (isCircle) {
+            style += `border-radius: 50%;`;
+        }
+
+        let content = '';
+        if (isText) {
+            style += `
+                background-color: transparent;
+                font-size: 16px;
+                font-family: 'Inter', sans-serif;
+                white-space: nowrap;
+            `;
+            content = el.text;
+        }
+
+        return `<div style="${style.replace(/\s+/g, ' ')}">${content}</div>`;
+    }).join('');
+
+    // 2. Wrap in HTML Boilerplate
+    const fullFile = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antigravity Design Export</title>
+    <style>
+        body { 
+            margin: 0; 
+            background-color: #121212; 
+            overflow: hidden; 
+            font-family: 'Inter', sans-serif;
+        }
+        .canvas { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh; 
+            background-image: radial-gradient(#444 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas">
+        ${elementsHTML}
+    </div>
+</body>
+</html>`;
+
+    // 3. Trigger Download
+    const blob = new Blob([fullFile], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'design-export.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 // Hook up Buttons
 document.getElementById('btn-export')?.addEventListener('click', exportState);
+document.getElementById('btn-export-html')?.addEventListener('click', exportToHTML);
 document.getElementById('btn-clear')?.addEventListener('click', clearCanvas);
-document.getElementById('btn-delete')?.addEventListener('click', deleteSelectedElement);
+document.getElementById('btn-delete')?.addEventListener('click', () => deleteElement(appState.selectedElementId));
 
 // Initial Load
 loadState();
