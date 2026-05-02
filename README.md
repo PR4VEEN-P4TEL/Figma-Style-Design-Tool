@@ -2,6 +2,8 @@
 
 A modern, browser-based design tool inspired by Figma, built with vanilla JavaScript, HTML, and CSS. Create and manipulate design elements on a canvas with an intuitive interface featuring layers, properties panels, and export capabilities.
 
+# Project URL - https://figma-style-design-tool-swart.vercel.app
+
 ## Features
 
 ### 🎨 Design Elements
